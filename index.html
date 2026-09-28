@@ -24,7 +24,7 @@ const opts=document.createDocumentFragment();for(const g of GAMES){const o=docum
 function parseInput(id){const v=document.getElementById(id).value.trim();const m=v.match(/\[(\d+)\]$/);return m?byId.get(m[1]):null}
 const map=L.map('map',{zoomControl:true}).setView([39.5,-98.35],4);L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(map);
 const layers=L.layerGroup().addTo(map);let requestNum=0;
-const TEAM_LOGO_DATA=`
+function teamKey(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'')}const TEAM_LOGO_DATA=`
 Boston College Eagles|103
 California Golden Bears|25
 Clemson Tigers|228
