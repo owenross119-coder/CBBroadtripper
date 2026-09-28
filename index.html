@@ -24,10 +24,373 @@ const opts=document.createDocumentFragment();for(const g of GAMES){const o=docum
 function parseInput(id){const v=document.getElementById(id).value.trim();const m=v.match(/\[(\d+)\]$/);return m?byId.get(m[1]):null}
 const map=L.map('map',{zoomControl:true}).setView([39.5,-98.35],4);L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(map);
 const layers=L.layerGroup().addTo(map);let requestNum=0;
-const teamLogos=new Map();
-function teamKey(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'')}
-async function loadTeamLogos(){try{const response=await fetch('https://site.web.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/teams?limit=500',{signal:AbortSignal.timeout(6000)});if(!response.ok)throw new Error('Logo source unavailable');const data=await response.json();const teams=data.sports?.[0]?.leagues?.[0]?.teams||data.teams||[];for(const item of teams){const t=item.team||item;const logo=t.logos?.find(x=>x.href)?.href||t.logo;if(!logo)continue;for(const name of [t.displayName,t.name,t.shortDisplayName,t.nickname,t.abbreviation])if(name)teamLogos.set(teamKey(name),logo)} }catch(e){console.info('Team logos unavailable; using initials markers.')}}
-const teamLogosReady=loadTeamLogos();
+const TEAM_LOGO_DATA=
+Boston College Eagles|103
+California Golden Bears|25
+Clemson Tigers|228
+Duke Blue Devils|150
+Florida State Seminoles|52
+Georgia Tech Yellow Jackets|59
+Louisville Cardinals|97
+Miami Hurricanes|2390
+NC State Wolfpack|152
+North Carolina Tar Heels|153
+Notre Dame Fighting Irish|87
+Pittsburgh Panthers|221
+SMU Mustangs|2567
+Stanford Cardinal|24
+Syracuse Orange|183
+Virginia Cavaliers|258
+Virginia Tech Hokies|259
+Wake Forest Demon Deacons|154
+Binghamton Bearcats|2066
+Bryant Bulldogs|2803
+Maine Black Bears|311
+NJIT Highlanders|2885
+New Hampshire Wildcats|160
+UAlbany Great Danes|399
+UMBC Retrievers|2378
+UMass Lowell River Hawks|2349
+Vermont Catamounts|261
+Charlotte 49ers|2429
+East Carolina Pirates|151
+Florida Atlantic Owls|2226
+Memphis Tigers|235
+North Texas Mean Green|249
+Rice Owls|242
+South Florida Bulls|58
+Temple Owls|218
+Tulane Green Wave|2655
+Tulsa Golden Hurricane|202
+UAB Blazers|5
+UTSA Roadrunners|2636
+Wichita State Shockers|2724
+Davidson Wildcats|2166
+Dayton Flyers|2168
+Duquesne Dukes|2184
+Fordham Rams|2230
+George Mason Patriots|2244
+George Washington Revolutionaries|45
+La Salle Explorers|2325
+Loyola Chicago Ramblers|2350
+Rhode Island Rams|227
+Richmond Spiders|257
+Saint Joseph's Hawks|2603
+Saint Louis Billikens|139
+St. Bonaventure Bonnies|179
+VCU Rams|2670
+Bellarmine Knights|91
+Florida Gulf Coast Eagles|526
+Jacksonville Dolphins|294
+Lipscomb Bisons|288
+North Florida Ospreys|2454
+Queens University Royals|2511
+Stetson Hatters|56
+West Florida Argonauts|2697
+Arizona State Sun Devils|9
+Arizona Wildcats|12
+BYU Cougars|252
+Baylor Bears|239
+Cincinnati Bearcats|2132
+Colorado Buffaloes|38
+Houston Cougars|248
+Iowa State Cyclones|66
+Kansas Jayhawks|2305
+Kansas State Wildcats|2306
+Oklahoma State Cowboys|197
+TCU Horned Frogs|2628
+Texas Tech Red Raiders|2641
+UCF Knights|2116
+Utah Utes|254
+West Virginia Mountaineers|277
+Butler Bulldogs|2086
+Creighton Bluejays|156
+DePaul Blue Demons|305
+Georgetown Hoyas|46
+Marquette Golden Eagles|269
+Providence Friars|2507
+Seton Hall Pirates|2550
+St. John's Red Storm|2599
+UConn Huskies|41
+Villanova Wildcats|222
+Xavier Musketeers|2752
+Eastern Washington Eagles|331
+Idaho State Bengals|304
+Idaho Vandals|70
+Montana Grizzlies|149
+Montana State Bobcats|147
+Northern Arizona Lumberjacks|2464
+Northern Colorado Bears|2458
+Portland State Vikings|2502
+Southern Utah Thunderbirds|253
+Utah Tech Trailblazers|3101
+Weber State Wildcats|2692
+Charleston Southern Buccaneers|2127
+Gardner-Webb Runnin' Bulldogs|2241
+High Point Panthers|2272
+Longwood Lancers|2344
+Presbyterian Blue Hose|2506
+Radford Highlanders|2515
+South Carolina Upstate Spartans|2908
+UNC Asheville Bulldogs|2427
+Winthrop Eagles|2737
+Illinois Fighting Illini|356
+Indiana Hoosiers|84
+Iowa Hawkeyes|2294
+Maryland Terrapins|120
+Michigan State Spartans|127
+Michigan Wolverines|130
+Minnesota Golden Gophers|135
+Nebraska Cornhuskers|158
+Northwestern Wildcats|77
+Ohio State Buckeyes|194
+Oregon Ducks|2483
+Penn State Nittany Lions|213
+Purdue Boilermakers|2509
+Rutgers Scarlet Knights|164
+UCLA Bruins|26
+USC Trojans|30
+Washington Huskies|264
+Wisconsin Badgers|275
+Cal Poly Mustangs|13
+Cal State Bakersfield Roadrunners|2934
+Cal State Fullerton Titans|2239
+Cal State Northridge Matadors|2463
+California Baptist Lancers|2856
+Long Beach State Beach|299
+Sacramento State Hornets|16
+UC Irvine Anteaters|300
+UC Riverside Highlanders|27
+UC San Diego Tritons|28
+UC Santa Barbara Gauchos|2540
+Utah Valley Wolverines|3084
+Campbell Fighting Camels|2097
+Charleston Cougars|232
+Drexel Dragons|2182
+Elon Phoenix|2210
+Hampton Pirates|2261
+Hofstra Pride|2275
+Monmouth Hawks|2405
+North Carolina A&T Aggies|2448
+Northeastern Huskies|111
+Stony Brook Seawolves|2619
+Towson Tigers|119
+UNC Wilmington Seahawks|350
+William & Mary Tribe|2729
+Delaware Blue Hens|48
+Florida International Panthers|2229
+Jacksonville State Gamecocks|55
+Kennesaw State Owls|338
+Liberty Flames|2335
+Louisiana Tech Bulldogs|2348
+Middle Tennessee Blue Raiders|2393
+Missouri State Bears|2623
+New Mexico State Aggies|166
+Sam Houston Bearkats|2534
+Western Kentucky Hilltoppers|98
+Cleveland State Vikings|325
+Detroit Mercy Titans|2174
+Green Bay Phoenix|2739
+IU Indianapolis Jaguars|85
+Milwaukee Panthers|270
+Northern Illinois Huskies|2459
+Northern Kentucky Norse|94
+Oakland Golden Grizzlies|2473
+Purdue Fort Wayne Mastodons|2870
+Robert Morris Colonials|2523
+Wright State Raiders|2750
+Youngstown State Penguins|2754
+Brown Bears|225
+Columbia Lions|171
+Cornell Big Red|172
+Dartmouth Big Green|159
+Harvard Crimson|108
+Pennsylvania Quakers|219
+Princeton Tigers|163
+Yale Bulldogs|43
+Coppin State Eagles|2154
+Delaware State Hornets|2169
+Howard Bison|47
+Maryland Eastern Shore Hawks|2379
+Morgan State Bears|2415
+Norfolk State Spartans|2450
+North Carolina Central Eagles|2428
+South Carolina State Bulldogs|2569
+Canisius Golden Griffins|2099
+Fairfield Stags|2217
+Iona Gaels|314
+Manhattan Jaspers|2363
+Marist Red Foxes|2368
+Merrimack Warriors|2771
+Mount St. Mary's Mountaineers|116
+Niagara Purple Eagles|315
+Quinnipiac Bobcats|2514
+Rider Broncs|2520
+Sacred Heart Pioneers|2529
+Saint Peter's Peacocks|2612
+Siena Saints|2561
+Akron Zips|2006
+Ball State Cardinals|2050
+Bowling Green Falcons|189
+Buffalo Bulls|2084
+Central Michigan Chippewas|2117
+Eastern Michigan Eagles|2199
+Kent State Golden Flashes|2309
+Massachusetts Minutemen|113
+Miami (OH) RedHawks|193
+Ohio Bobcats|195
+Toledo Rockets|2649
+Western Michigan Broncos|2711
+Belmont Bruins|2057
+Bradley Braves|71
+Drake Bulldogs|2181
+Evansville Purple Aces|339
+Illinois State Redbirds|2287
+Indiana State Sycamores|282
+Murray State Racers|93
+Northern Iowa Panthers|2460
+Southern Illinois Salukis|79
+UIC Flames|82
+Valparaiso Beacons|2674
+Air Force Falcons|2005
+Grand Canyon Lopes|2253
+Hawai'i Rainbow Warriors|62
+Nevada Wolf Pack|2440
+New Mexico Lobos|167
+San José State Spartans|23
+UC Davis Aggies|302
+UNLV Rebels|2439
+UTEP Miners|2638
+Wyoming Cowboys|2751
+Central Connecticut Blue Devils|2115
+Chicago State Cougars|2130
+Fairleigh Dickinson Knights|161
+Le Moyne Dolphins|2330
+Long Island University Sharks|112358
+Mercyhurst Lakers|2385
+New Haven Chargers|2441
+Stonehill Skyhawks|284
+Wagner Seahawks|2681
+Eastern Illinois Panthers|2197
+Lindenwood Lions|2815
+Morehead State Eagles|2413
+SIU Edwardsville Cougars|2565
+Southeast Missouri State Redhawks|2546
+Southern Indiana Screaming Eagles|88
+Tennessee State Tigers|2634
+UT Martin Skyhawks|2630
+Western Illinois Leathernecks|2710
+Boise State Broncos|68
+Colorado State Rams|36
+Fresno State Bulldogs|278
+Gonzaga Bulldogs|2250
+Oregon State Beavers|204
+San Diego State Aztecs|21
+Texas State Bobcats|326
+Utah State Aggies|328
+Washington State Cougars|265
+American University Eagles|44
+Army Black Knights|349
+Boston University Terriers|104
+Bucknell Bison|2083
+Colgate Raiders|2142
+Holy Cross Crusaders|107
+Lafayette Leopards|322
+Lehigh Mountain Hawks|2329
+Loyola Maryland Greyhounds|2352
+Navy Midshipmen|2426
+Alabama Crimson Tide|333
+Arkansas Razorbacks|8
+Auburn Tigers|2
+Florida Gators|57
+Georgia Bulldogs|61
+Kentucky Wildcats|96
+LSU Tigers|99
+Mississippi State Bulldogs|344
+Missouri Tigers|142
+Oklahoma Sooners|201
+Ole Miss Rebels|145
+South Carolina Gamecocks|2579
+Tennessee Volunteers|2633
+Texas A&M Aggies|245
+Texas Longhorns|251
+Vanderbilt Commodores|238
+Alabama A&M Bulldogs|2010
+Alabama State Hornets|2011
+Alcorn State Braves|2016
+Arkansas-Pine Bluff Golden Lions|2029
+Bethune-Cookman Wildcats|2065
+Florida A&M Rattlers|50
+Grambling Tigers|2755
+Jackson State Tigers|2296
+Mississippi Valley State Delta Devils|2400
+Prairie View A&M Panthers|2504
+Southern Jaguars|2582
+Texas Southern Tigers|2640
+Chattanooga Mocs|236
+East Tennessee State Buccaneers|2193
+Furman Paladins|231
+Mercer Bears|2382
+Samford Bulldogs|2535
+Tennessee Tech Golden Eagles|2635
+The Citadel Bulldogs|2643
+UNC Greensboro Spartans|2430
+VMI Keydets|2678
+Western Carolina Catamounts|2717
+Wofford Terriers|2747
+East Texas A&M Lions|2837
+Houston Christian Huskies|2277
+Incarnate Word Cardinals|2916
+LSU New Orleans Privateers|2443
+Lamar Cardinals|2320
+McNeese Cowboys|2377
+Nicholls Colonels|2447
+Northwestern State Demons|2466
+SE Louisiana Lions|2545
+Stephen F. Austin Lumberjacks|2617
+Texas A&M-Corpus Christi Islanders|357
+UT Rio Grande Valley Vaqueros|292
+Kansas City Roos|140
+North Dakota Fighting Hawks|155
+North Dakota State Bison|2449
+Omaha Mavericks|2437
+Oral Roberts Golden Eagles|198
+South Dakota Coyotes|233
+South Dakota State Jackrabbits|2571
+St. Thomas Tommies|2900
+App State Mountaineers|2026
+Arkansas State Red Wolves|2032
+Coastal Carolina Chanticleers|324
+Georgia Southern Eagles|290
+Georgia State Panthers|2247
+James Madison Dukes|256
+Louisiana Ragin' Cajuns|309
+Marshall Thundering Herd|276
+Old Dominion Monarchs|295
+South Alabama Jaguars|6
+Southern Miss Golden Eagles|2572
+Troy Trojans|2653
+UL Monroe Warhawks|2433
+Abilene Christian Wildcats|2000
+Austin Peay Governors|2046
+Central Arkansas Bears|2110
+Eastern Kentucky Colonels|2198
+Little Rock Trojans|2031
+North Alabama Lions|2453
+Tarleton State Texans|2627
+UT Arlington Mavericks|250
+West Georgia Wolves|2698
+Denver Pioneers|2172
+Loyola Marymount Lions|2351
+Pacific Tigers|279
+Pepperdine Waves|2492
+Portland Pilots|2501
+Saint Mary's Gaels|2608
+San Diego Toreros|301
+San Francisco Dons|2539
+Santa Clara Broncos|2541
+Seattle U Redhawks|2547
+;const teamLogos=new Map(TEAM_LOGO_DATA.trim().split(String.fromCharCode(10)).map(row=>{row=row.trim();const i=row.lastIndexOf('|');return[teamKey(row.slice(0,i)),row.slice(i+1)]}));for(const[k,id]of teamLogos)teamLogos.set(k,'https://a.espncdn.com/combiner/i?img=/i/teamlogos/ncaa/500/'+id+'.png&scale=crop&cquality=40&location=origin&w=80&h=80');const teamLogosReady=Promise.resolve();
 function setStatus(text,error=false){const el=document.getElementById('status');el.textContent=text;el.classList.toggle('error',error)}
 function popup(g,tag){return `<div class="popup-game">${esc(g.game)}</div><div class="popup-meta">${esc(fmtDateTime(g.date))}${g.neutral?' · Neutral site':''}<br>${esc(g.venue)} · ${esc(g.city)}${tag?'<br><b>'+esc(tag)+'</b>':''}</div>`}
 function esc(v){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
